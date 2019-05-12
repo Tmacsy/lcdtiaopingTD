@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items version="2" >
+
+    <item
+        is-multidex="false"
+        jar="F:\lcd\sdk\extras\android\m2repository\com\android\support\support-v4\19.1.0\support-v4-19.1.0.jar"
+        jumboMode="false"
+        optimize="true"
+        revision="26.0.0"
+        sha1="85f201b380937e61a9dce6ca90ccf6872abbfb67">
+        <dex dex="F:\lcd\lcdtiaoping\app\build\intermediates\pre-dexed\debug\support-v4-19.1.0_98f67fc2b7168c35a7b9d35dacebad5634251e6e.jar" />
+    </item>
+
+</items>

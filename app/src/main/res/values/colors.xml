@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="gray_td">#999999</color>
+    <color name="red_td">#FF0000</color>
+    <color name="green_td">#00ba1f</color>
+</resources>

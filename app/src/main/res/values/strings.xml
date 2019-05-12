@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--  <string name="app_name">BstLcd</string> -->
+    <string name="app_name">LCDBusView</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="default_encoding">text/plain</string>
+    <string name="title_activity_main2">Main2Activity</string>
+
+</resources>

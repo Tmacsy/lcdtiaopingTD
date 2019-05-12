@@ -1,0 +1,76 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+ <head>
+  <title> New Document </title>
+  <meta http-equiv="content-type" content="text/html;charset=gb3212"/>
+ <style type="text/css">
+*{
+	margin:0px;
+	border:0px;
+	padding:0px;
+}
+</style>
+ </head>
+ 
+ <body>
+<p id="demo"></p>
+<script type="text/javascript">
+
+    function doAjaxCall(the_request)
+    {
+        var request=null,voteable,voteable1,age,flag = 0;
+
+        if(window.XMLHttpRequest)
+        {
+            request=new XMLHttpRequest();
+        }else if(window.ActiveXObject)
+        {
+            request=new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        if(request)
+        {
+            request.open("GET",the_request,true);
+            request.onreadystatechange=function()
+            {
+                if(request.readyState===4)
+                {
+                    if (request.status == 200 || request.status == 0)
+                    {
+			voteable = request.responseText;
+			document.getElementById("demo").innerHTML=voteable;
+		  	age = parseInt(voteable);
+			
+			if(document.getElementById("ifr").name != voteable)
+			{
+
+				if(age > 18)
+				{
+					document.getElementById("ifr").src="realtime.html";
+
+				}
+
+				if(age < 18)
+				{
+					document.getElementById("ifr").src="disweb.html";
+				}
+				document.getElementById("ifr").name=voteable;
+			}
+
+                    }
+                }
+            }
+            request.send(null);
+        }
+	else
+	{
+            alert("error");
+        }
+	
+    }                  	
+   
+    setInterval(function(){doAjaxCall('a.txt')},100*1000);
+  </script>
+<iframe id="ifr" src="realtime.html" name="11" width="1366" height="385" frameborder="0"></iframe>
+
+ </body>
+</html>
