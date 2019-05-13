@@ -37,4 +37,8 @@ public class ActionType {
 	public static final String BEGINTIME = "beginTime";
 	public static final String ENDTIME = "endTime";
 	public static final String SAVE_PATH = "save_path";
+
+	public static final String DOMAIN = "Domain";
+	public static final String POST = "Post";
+
 }

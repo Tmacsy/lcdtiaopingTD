@@ -3,6 +3,7 @@ package com.rong.lcdbusview.service;
 import android.text.TextUtils;
 
 import com.rong.lcdbusview.MainApplication;
+import com.rong.lcdbusview.R;
 import com.rong.lcdbusview.datas.AdvertisementData;
 import com.rong.lcdbusview.tools.FileUtil;
 import com.rong.lcdbusview.tools.HttpUtils;
@@ -15,6 +16,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -30,37 +32,13 @@ import okhttp3.Callback;
 import okhttp3.Headers;
 import okhttp3.Response;
 
-import static com.rong.lcdbusview.datas.ActionType.ADID;
-import static com.rong.lcdbusview.datas.ActionType.BEGINTIME;
-import static com.rong.lcdbusview.datas.ActionType.CHECKVALUE;
-import static com.rong.lcdbusview.datas.ActionType.CODE;
-import static com.rong.lcdbusview.datas.ActionType.DATA;
-import static com.rong.lcdbusview.datas.ActionType.DEVICECODE;
-import static com.rong.lcdbusview.datas.ActionType.ENDTIME;
-import static com.rong.lcdbusview.datas.ActionType.JSON_APLICATION;
-import static com.rong.lcdbusview.datas.ActionType.MESSAGE;
-import static com.rong.lcdbusview.datas.ActionType.NAME;
-import static com.rong.lcdbusview.datas.ActionType.ORDERNO;
-import static com.rong.lcdbusview.datas.ActionType.PASSWORD;
-import static com.rong.lcdbusview.datas.ActionType.SIZE;
-import static com.rong.lcdbusview.datas.ActionType.SYSID;
-import static com.rong.lcdbusview.datas.ActionType.TIMES;
-import static com.rong.lcdbusview.datas.ActionType.TOKEN;
-import static com.rong.lcdbusview.datas.ActionType.TYPE;
-import static com.rong.lcdbusview.datas.ActionType.URL;
-import static com.rong.lcdbusview.datas.ActionType.URL_COLON;
-import static com.rong.lcdbusview.datas.ActionType.URL_CONFIRMRECEIVE;
-import static com.rong.lcdbusview.datas.ActionType.URL_HEAD;
-import static com.rong.lcdbusview.datas.ActionType.URL_HEARTBEAT;
-import static com.rong.lcdbusview.datas.ActionType.URL_LOGIN;
-import static com.rong.lcdbusview.datas.ActionType.URL_QUERYAD;
-import static com.rong.lcdbusview.datas.ActionType.URL_QUERYDEVICE;
-import static com.rong.lcdbusview.datas.ActionType.USERNAME;
-import static com.rong.lcdbusview.datas.ActionType.VERSION;
+import static com.rong.lcdbusview.datas.ActionType.*;
 
 public class ADDownloadManager {
     private static final String TAG = ADDownloadManager.class.getSimpleName();
 
+    private static final String AV_CONFIGURATION_FILE = "ad_configuration.json";
+    private static final String AV_MESSAGE_FILE = "av_message.json";
 
     private String mUserName = "bst";
     private String mPassWord = "123";
@@ -90,6 +68,24 @@ public class ADDownloadManager {
         advertisementDataHashMap = new HashMap<>();
         advertisementDataQueue = new ArrayList<>();
 //        condition = lock.newCondition();
+    }
+
+    public void startADManager(){
+        getADMessage();
+        try {
+            readADConfiguration();
+            login();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void stopADManager(){
+        stopHeartBeat();
     }
 
     public void login() throws IOException, JSONException {
@@ -140,7 +136,7 @@ public class ADDownloadManager {
                             LogTools.d(TAG, "mToken = " + mToken);
 //                            queryDevice();
                            // heartbeat();
-                            queryAd();
+                            //queryAd();
                             startHeartBeat();
                         }else {
                             final String message = json.optString(MESSAGE);
@@ -154,6 +150,147 @@ public class ADDownloadManager {
                 }
             }
         });
+    }
+
+
+    private void getADMessage(){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    List<AdvertisementData> advertisementDataList = readADMessage();
+
+                    if(mADDownloadCallBack != null){
+                        while (true) {
+                            if (lock.tryLock()) {
+                                break;
+                            } else {
+                                Thread.sleep(50);
+                            }
+                        }
+                        mADDownloadCallBack.onChangeADCompleted(advertisementDataQueue);
+                        lock.unlock();
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    public void setADConfiguration(String domain,String post,String userName,String passWord,String sysId,String deviceCode) throws IOException, JSONException {
+        this.mDomain = domain;
+        this.mPost = post;
+        this.mUserName= userName;
+        this.mPassWord = passWord;
+        this.mSysId = sysId;
+        this.mDeviceCode = deviceCode;
+        stopHeartBeat();
+        login();
+        saveADConfiguration();
+    }
+
+    private List<AdvertisementData> readADMessage() throws JSONException {
+        List<AdvertisementData> advertisementDataList = new ArrayList<>();
+        File file = new File(MainApplication.videoFile+File.pathSeparator+AV_MESSAGE_FILE);
+        if(!file.exists()){
+            return null;
+        }
+        String json = FileUtil.readString(file.getAbsolutePath(),"GBK");
+        if(TextUtils.isEmpty(json)){
+            return null;
+        }
+        JSONArray jsonArray = new JSONArray(json);
+        final int length = jsonArray.length();
+        for(int i = 0; i < length; i ++){
+            JSONObject jsonObject = jsonArray.optJSONObject(i);
+            if(jsonObject != null){
+                AdvertisementData advertisementData = new AdvertisementData();
+                final String adId = jsonObject.optString(ADID);
+                final String savePath = jsonObject.optString(SAVE_PATH);
+                advertisementData.setAdId(adId);
+                advertisementData.setBeginTime(jsonObject.optString(BEGINTIME));
+                advertisementData.setCheckValue(jsonObject.optString(CHECKVALUE));
+                advertisementData.setName(jsonObject.optString(NAME));
+                advertisementData.setEndTime(jsonObject.optString(ENDTIME));
+                advertisementData.setOrderNo(jsonObject.optInt(ORDERNO));
+                advertisementData.setSize(jsonObject.optLong(SIZE));
+                advertisementData.setTimes(jsonObject.optInt(TIMES));
+                advertisementData.setType(jsonObject.optInt(TYPE));
+                advertisementData.setUrl(jsonObject.optString(URL));
+                advertisementData.setSavePath(savePath);
+                if(!TextUtils.isEmpty(savePath)) {
+                    advertisementDataList.add(advertisementData);
+                }
+            }
+        }
+        return advertisementDataList;
+    }
+
+    public void saveADMessage(List<AdvertisementData> advertisementDataList ) throws JSONException, UnsupportedEncodingException {
+        if(advertisementDataList == null || advertisementDataList.isEmpty()){
+            return;
+        }
+        final int size = advertisementDataList.size();
+        JSONArray jsonArray = new JSONArray();
+        for (int i = 0; i < size ; i ++){
+            AdvertisementData advertisementData = advertisementDataList.get(i);
+            if(advertisementData != null){
+                final String pathSave = advertisementData.getSavePath();
+                if(!TextUtils.isEmpty(pathSave)){
+                    JSONObject jsonObject = new JSONObject();
+                    jsonObject.put(BEGINTIME,advertisementData.getAdId());
+                    jsonObject.put(BEGINTIME,advertisementData.getBeginTime());
+                    jsonObject.put(CHECKVALUE,advertisementData.getCheckValue());
+                    jsonObject.put(NAME,advertisementData.getName());
+                    jsonObject.put(ENDTIME,advertisementData.getEndTime());
+                    jsonObject.put(ORDERNO,advertisementData.getOrderNo());
+                    jsonObject.put(SIZE,advertisementData.getSize());
+                    jsonObject.put(TIMES,advertisementData.getTimes());
+                    jsonObject.put(TYPE,advertisementData.getType());
+                    jsonObject.put(URL,advertisementData.getUrl());
+                    jsonObject.put(SAVE_PATH,advertisementData.getSavePath());
+                    jsonArray.put(jsonObject);
+                }
+            }
+        }
+        FileUtil.writeBytes(MainApplication.sdcard+File.pathSeparator+AV_CONFIGURATION_FILE,jsonArray.toString().getBytes("GBK"));
+
+    }
+
+    private void readADConfiguration() throws UnsupportedEncodingException, JSONException {
+        File file = new File(MainApplication.sdcard+File.pathSeparator+AV_CONFIGURATION_FILE);
+        if(!file.exists()){
+            saveADConfiguration();
+            return;
+        }
+        String json = FileUtil.readString(file.getAbsolutePath(),"GBK");
+        if(TextUtils.isEmpty(json)){
+            saveADConfiguration();
+            return;
+        }
+        JSONObject jsonObject = new JSONObject(json);
+        mDomain = jsonObject.optString(DOMAIN);
+        mPost = jsonObject.optString(POST);
+        mUserName = jsonObject.optString(USERNAME);
+        mPassWord = jsonObject.optString(PASSWORD);
+        mSysId = jsonObject.optString(SYSID);
+        mDeviceCode =jsonObject.optString(DEVICECODE);
+        mVersion = jsonObject.optString(VERSION);
+    }
+
+    private void saveADConfiguration() throws JSONException, UnsupportedEncodingException {
+        JSONObject object = new JSONObject();
+        object.put(DOMAIN,mDomain);
+        object.put(POST,mPost);
+        object.put(USERNAME,mUserName);
+        object.put(PASSWORD,mPassWord);
+        object.put(SYSID,mSysId);
+        object.put(VERSION,mVersion);
+        object.put(DEVICECODE,mDeviceCode);
+        FileUtil.writeBytes(MainApplication.sdcard+File.pathSeparator+AV_CONFIGURATION_FILE,object.toString().getBytes("GBK"));
     }
 
     private void queryDevice() throws IOException, JSONException {
@@ -198,6 +335,8 @@ public class ADDownloadManager {
             }
         });
     }
+
+
 
     private void confirmReceive() throws IOException, JSONException {
         if(TextUtils.isEmpty(mToken)){
@@ -356,6 +495,11 @@ public class ADDownloadManager {
         });
     }
 
+    /**
+     *
+     * @throws IOException
+     * @throws JSONException
+     */
     private void heartbeat() throws IOException, JSONException {
         if(TextUtils.isEmpty(mToken)){
             return;
@@ -402,6 +546,7 @@ public class ADDownloadManager {
                                         advertisementDataQueue.clear();
                                         lock.unlock();
                                         queryAd();
+                                        saveADConfiguration();
                                     }
                                 }
                             }

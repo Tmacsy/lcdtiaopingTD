@@ -334,6 +334,9 @@ public class MainApplication extends Application {
 		File file = new File(route + "/line.csv");
 		if (file.exists()) {
 			String s = FileUtil.readString(route + "/line.csv", "GBK");
+			if(TextUtils.isEmpty(s)){
+				return;
+			}
 			LogTools.d(TAG, s);
 			String[] src = s.split("\\n");
 			if (src != null && src.length >= 2) {
@@ -644,6 +647,9 @@ public class MainApplication extends Application {
 			if (list.exists()) {
 				playFiles = new ArrayList<>();
 				String route_stations = FileUtil.readString(list.getAbsolutePath(), "GBK");
+				if(TextUtils.isEmpty(route_stations)){
+					return;
+				}
 				LogTools.d(TAG, route_stations);
 				String[] stations = route_stations.split("\\n");
 				if (stations != null && stations.length >= 2) {

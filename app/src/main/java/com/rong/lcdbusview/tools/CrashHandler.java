@@ -18,6 +18,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -25,8 +26,13 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Looper;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
+import com.rong.lcdbusview.MainActivity;
+import com.rong.lcdbusview.MainApplication;
 
 public class CrashHandler implements UncaughtExceptionHandler {
 	  /** TAG */
@@ -241,5 +247,8 @@ public class CrashHandler implements UncaughtExceptionHandler {
             }
         }
     }
+
+
+
 
 }

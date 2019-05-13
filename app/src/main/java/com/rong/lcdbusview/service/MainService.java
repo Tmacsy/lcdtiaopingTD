@@ -2,10 +2,8 @@ package com.rong.lcdbusview.service;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Collections;
+import java.io.UnsupportedEncodingException;
+import java.util.*;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -81,6 +79,20 @@ public class MainService extends Service implements Transmission, TransmissionCa
             mAdvertisementDataList.clear();
             final int size = advertisementDataQueue.size();
             int addSize = 0;
+			//自定义Comparator对象，自定义排序
+			Comparator c = new Comparator<AdvertisementData>() {
+				@Override
+				public int compare(AdvertisementData o1, AdvertisementData o2) {
+					if(o1== null || o2 == null){
+						return -1;
+					}
+					if(o1.getOrderNo()<o2.getOrderNo())
+						return 1;
+						//注意！！返回值必须是一对相反数，否则无效。jdk1.7以后就是这样。
+						//		else return 0; //无效
+					else return -1;
+				}
+			};
 //            while (size == addSize){
                 for(int i = 0 ; i < size; i ++){
                     AdvertisementData advertisementData = advertisementDataQueue.get(i);
@@ -92,7 +104,15 @@ public class MainService extends Service implements Transmission, TransmissionCa
                 }
 //            }
             if(!mAdvertisementDataList.isEmpty()){
-                sendBroadcast(new Intent(ACTION_AD_CHANGE));
+            	Collections.sort(mAdvertisementDataList,c);
+				try {
+					adDownloadManager.saveADMessage(mAdvertisementDataList);
+				} catch (JSONException e) {
+					e.printStackTrace();
+				} catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+				}
+				sendBroadcast(new Intent(ACTION_AD_CHANGE));
             }
         }
     }
@@ -112,13 +132,7 @@ public class MainService extends Service implements Transmission, TransmissionCa
 		init();
 		adDownloadManager = new ADDownloadManager();
 		adDownloadManager.setADDownloadCallBack(this);
-		try {
-			adDownloadManager.login();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (JSONException e) {
-            e.printStackTrace();
-        }
+		adDownloadManager.startADManager();
 
     }
 
@@ -237,6 +251,7 @@ public class MainService extends Service implements Transmission, TransmissionCa
 	public void onDestroy() {
 		super.onDestroy();
 		datasManage.close();
+		adDownloadManager.stopADManager();
 		// http.stop();
 	}
 
@@ -550,6 +565,9 @@ public class MainService extends Service implements Transmission, TransmissionCa
 			return null;
 		}
 		String routeJsonStr = FileUtil.readString(filename, "GBK");
+		if(TextUtils.isEmpty(routeJsonStr)){
+			return null;
+		}
 		try {
 			route = new ArrayList<StationMsg>();
 			JSONArray array = new JSONArray(routeJsonStr);
@@ -576,6 +594,9 @@ public class MainService extends Service implements Transmission, TransmissionCa
 			return null;
 		}
 		String routeJsonStr = FileUtil.readString(routenameJson, "GBK");
+		if(TextUtils.isEmpty(routeJsonStr)){
+			return null;
+		}
 		try {
 			JSONArray array = new JSONArray(routeJsonStr);
 			if (array != null) {
